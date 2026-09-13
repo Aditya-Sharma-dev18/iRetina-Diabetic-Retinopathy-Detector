@@ -1,0 +1,15 @@
+Set-Location D:\PROJECTS\Diabetic_retinopathy_app
+
+@"
+node_modules/
+.env
+.env.*
+dist/
+build/
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+*.log
+"@ | Out-File -FilePath .gitignore -Encoding utf8
