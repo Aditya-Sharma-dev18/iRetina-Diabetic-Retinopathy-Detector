@@ -112,9 +112,13 @@ app.post('/api/reports/analyze', auth(['doctor']), upload.single('image'), async
       contentType: req.file.mimetype
     });
 
-    const aiRes = await axios.post(process.env.FASTAPI_URL || 'http://127.0.0.1:8000/api/v1/diagnose', form, {
+    // Clean and trim the FastAPI URL to prevent "Invalid URL" crashes caused by trailing spaces or newlines in env variables
+    const fastapiUrl = (process.env.FASTAPI_URL || 'https://iretina-ai-engine.onrender.com/api/v1/diagnose').trim();
+
+    const aiRes = await axios.post(fastapiUrl, form, {
       headers: form.getHeaders(),
-      maxBodyLength: Infinity
+      maxBodyLength: Infinity,
+      timeout: 45000 // 45s timeout to handle Render cold-start latency
     });
 
     const ai = aiRes.data.data;
@@ -140,7 +144,8 @@ app.post('/api/reports/analyze', auth(['doctor']), upload.single('image'), async
     await report.save();
     return res.status(201).json({ success: true, data: report });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error('AI Inference Gateway Error:', err.response?.data || err.message);
+    return res.status(500).json({ success: false, message: err.response?.data?.message || err.message });
   }
 });
 
