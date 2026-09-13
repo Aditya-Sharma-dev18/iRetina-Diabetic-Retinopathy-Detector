@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000/api';
+const API_BASE = 'https://iretina-node-gateway.onrender.com/api';
 
 export default function App() {
   // Safe Storage Extraction to prevent JSON parse crash
