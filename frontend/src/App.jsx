@@ -3,6 +3,12 @@ import axios from 'axios';
 
 const API_BASE = 'https://iretina-node-gateway.onrender.com/api';
 
+// Configure Axios instance with a 30s timeout to handle Render cold starts gracefully
+const api = axios.create({
+  baseURL: API_BASE,
+  timeout: 30000 
+});
+
 export default function App() {
   // Safe Storage Extraction to prevent JSON parse crash
   const [token, setToken] = useState(() => localStorage.getItem('iretina_token') || '');
@@ -81,7 +87,7 @@ export default function App() {
     if (!token || !user) return;
     try {
       const endpoint = isDoctor ? '/reports/all' : '/reports/my';
-      const res = await axios.get(`${API_BASE}${endpoint}`, {
+      const res = await api.get(endpoint, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data?.success && Array.isArray(res.data?.data)) {
@@ -104,8 +110,8 @@ export default function App() {
     setAuthLoading(true);
     try {
       if (isRegister) {
-        await axios.post(`${API_BASE}/auth/register`, authForm);
-        const loginRes = await axios.post(`${API_BASE}/auth/login`, {
+        await api.post('/auth/register', authForm);
+        const loginRes = await api.post('/auth/login', {
           email: authForm.email,
           password: authForm.password
         });
@@ -118,7 +124,7 @@ export default function App() {
 
         saveAuth(loginRes.data.token, receivedUser);
       } else {
-        const res = await axios.post(`${API_BASE}/auth/login`, {
+        const res = await api.post('/auth/login', {
           email: authForm.email,
           password: authForm.password
         });
@@ -132,7 +138,12 @@ export default function App() {
         saveAuth(res.data.token, receivedUser);
       }
     } catch (err) {
-      setAuthError(err.response?.data?.message || 'Access verification rejected.');
+      console.error('Authentication Error:', err);
+      if (err.code === 'ECONNABORTED') {
+        setAuthError('Server is waking up from sleep. Please wait 10 seconds and click again.');
+      } else {
+        setAuthError(err.response?.data?.message || err.message || 'Access verification rejected.');
+      }
     } finally {
       setAuthLoading(false);
     }
@@ -163,7 +174,7 @@ export default function App() {
       fd.append('patientEmail', patientEmail);
       fd.append('doctorNotes', doctorNotes);
 
-      const res = await axios.post(`${API_BASE}/reports/analyze`, fd, {
+      const res = await api.post('/reports/analyze', fd, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
@@ -189,7 +200,7 @@ export default function App() {
 
   const downloadClinicalPdf = async (reportId, displayId) => {
     try {
-      const res = await axios.get(`${API_BASE}/reports/${reportId}/pdf`, {
+      const res = await api.get(`/reports/${reportId}/pdf`, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
       });
