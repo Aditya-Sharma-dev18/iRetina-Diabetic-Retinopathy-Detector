@@ -4,8 +4,19 @@ import axios from 'axios';
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000/api';
 
 export default function App() {
-  const [token, setToken] = useState(localStorage.getItem('iretina_token') || '');
-  const [user, setUser] = useState(JSON.parse(localStorage.getItem('iretina_user') || 'null'));
+  // Safe Storage Extraction to prevent JSON parse crash
+  const [token, setToken] = useState(() => localStorage.getItem('iretina_token') || '');
+  const [user, setUser] = useState(() => {
+    try {
+      const raw = localStorage.getItem('iretina_user');
+      if (!raw || raw === 'undefined' || raw === 'null') return null;
+      return JSON.parse(raw);
+    } catch {
+      localStorage.removeItem('iretina_user');
+      return null;
+    }
+  });
+
   const [activeModule, setActiveModule] = useState('workstation'); // 'workstation' | 'archive'
 
   // Authentication
@@ -37,11 +48,26 @@ export default function App() {
   const fileInputRef = useRef(null);
   const viewportRef = useRef(null);
 
+  const isDoctor = (user?.role || '').toLowerCase() === 'doctor';
+
   const saveAuth = (newToken, newUser) => {
-    setToken(newToken);
-    setUser(newUser);
-    localStorage.setItem('iretina_token', newToken);
-    localStorage.setItem('iretina_user', JSON.stringify(newUser));
+    const validToken = newToken || '';
+    const validUser = newUser && typeof newUser === 'object' ? newUser : null;
+
+    setToken(validToken);
+    setUser(validUser);
+
+    if (validToken) {
+      localStorage.setItem('iretina_token', validToken);
+    } else {
+      localStorage.removeItem('iretina_token');
+    }
+
+    if (validUser) {
+      localStorage.setItem('iretina_user', JSON.stringify(validUser));
+    } else {
+      localStorage.removeItem('iretina_user');
+    }
   };
 
   const logout = () => {
@@ -52,12 +78,17 @@ export default function App() {
   };
 
   const fetchArchive = async () => {
+    if (!token || !user) return;
     try {
-      const endpoint = user?.role === 'doctor' ? '/reports/all' : '/reports/my';
+      const endpoint = isDoctor ? '/reports/all' : '/reports/my';
       const res = await axios.get(`${API_BASE}${endpoint}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (res.data.success) setReportsHistory(res.data.data);
+      if (res.data?.success && Array.isArray(res.data?.data)) {
+        setReportsHistory(res.data.data);
+      } else if (Array.isArray(res.data)) {
+        setReportsHistory(res.data);
+      }
     } catch (e) {
       console.error('Diagnostic archive lookup failure:', e);
     }
@@ -78,13 +109,27 @@ export default function App() {
           email: authForm.email,
           password: authForm.password
         });
-        saveAuth(loginRes.data.token, loginRes.data.user);
+        
+        const receivedUser = loginRes.data.user || loginRes.data.data || {
+          name: authForm.name || 'Clinician',
+          email: authForm.email,
+          role: authForm.role || 'doctor'
+        };
+
+        saveAuth(loginRes.data.token, receivedUser);
       } else {
         const res = await axios.post(`${API_BASE}/auth/login`, {
           email: authForm.email,
           password: authForm.password
         });
-        saveAuth(res.data.token, res.data.user);
+
+        const receivedUser = res.data.user || res.data.data || {
+          name: res.data.name || authForm.email.split('@')[0] || 'Clinician',
+          email: authForm.email,
+          role: res.data.role || authForm.role || 'doctor'
+        };
+
+        saveAuth(res.data.token, receivedUser);
       }
     } catch (err) {
       setAuthError(err.response?.data?.message || 'Access verification rejected.');
@@ -154,16 +199,16 @@ export default function App() {
       link.href = dlUrl;
       link.download = `iRetina_Clinical_${displayId || 'Audit'}.pdf`;
       link.click();
-    } catch (err) {
+    } catch {
       alert('Clinical report rendering failed.');
     }
   };
 
   // Viewport Pan / Zoom & Retinal Coordinates
-  const handleMouseDown = (e) => {
+  const handleMouseDown = () => {
     if (zoom <= 1) return;
     setIsDragging(true);
-    setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+    setDragStart({ x: window.event?.clientX - pan.x, y: window.event?.clientY - pan.y });
   };
 
   const handleMouseMove = (e) => {
@@ -209,7 +254,7 @@ export default function App() {
   };
 
   // ==========================================
-  // VIEW 1: DOCTOR & PATIENT AUTHENTICATION PORTAL
+  // VIEW 1: AUTHENTICATION PORTAL
   // ==========================================
   if (!token || !user) {
     return (
@@ -339,7 +384,7 @@ export default function App() {
     <div className="z-workstation-shell">
       <WorkstationTheme />
 
-      {/* Primary Frame Header */}
+      {/* Frame Header */}
       <header className="z-masthead">
         <div className="z-masthead-left">
           <div className="z-masthead-icon">
@@ -364,14 +409,14 @@ export default function App() {
           </div>
           <div className="z-telemetry-pod">
             <span className="z-k">METRIC:</span>
-            <span className="z-v">ETDRS ICDR Standard</span>
+            <span className="z-v">ETDRS Standard</span>
           </div>
         </div>
 
         <div className="z-masthead-right">
           <div className="z-operator-card">
-            <span className="z-op-name">{user.name}</span>
-            <span className="z-op-title">{user.role === 'doctor' ? 'ATTENDING CLINICIAN' : 'REGISTERED PATIENT'}</span>
+            <span className="z-op-name">{user?.name || 'Authorized User'}</span>
+            <span className="z-op-title">{isDoctor ? 'ATTENDING CLINICIAN' : 'REGISTERED PATIENT'}</span>
           </div>
           <button onClick={logout} className="z-btn-power" title="Sign Out">
             <PowerIcon size={14} color="#94a3b8" />
@@ -379,10 +424,10 @@ export default function App() {
         </div>
       </header>
 
-      {/* Sub-Masthead Toolbar */}
+      {/* Toolbar */}
       <div className="z-sub-toolbar">
         <div className="z-module-tabs">
-          {user.role === 'doctor' && (
+          {isDoctor && (
             <button
               className={activeModule === 'workstation' ? 'active' : ''}
               onClick={() => setActiveModule('workstation')}
@@ -396,7 +441,7 @@ export default function App() {
             onClick={() => setActiveModule('archive')}
           >
             <DatabaseIcon size={14} color={activeModule === 'archive' ? '#f59e0b' : '#64748b'} />
-            {user.role === 'doctor' ? 'PATIENT CASE REPOSITORY' : 'MY CLINICAL RECORDS'}
+            {isDoctor ? 'PATIENT CASE REPOSITORY' : 'MY CLINICAL RECORDS'}
             <span className="z-counter">{reportsHistory.length}</span>
           </button>
         </div>
@@ -409,10 +454,9 @@ export default function App() {
       </div>
 
       {/* Module 1: Diagnostic Workstation Grid */}
-      {activeModule === 'workstation' && user.role === 'doctor' && (
+      {activeModule === 'workstation' && isDoctor && (
         <main className="z-workstation-deck">
-          
-          {/* Deck 1: Left Intake Console */}
+          {/* Left Intake Console */}
           <aside className="z-panel-intake">
             <div className="z-card-label">
               <span>SCAN INGESTION & ANAMNESIS</span>
@@ -450,7 +494,7 @@ export default function App() {
                       <img src={previewUrl} alt="Retina Thumbnail" />
                       <div className="z-dropzone-meta">
                         <span className="z-dm-filename">{selectedFile?.name}</span>
-                        <span className="z-dm-filesize">{(selectedFile?.size / 1048576).toFixed(2)} MB • RAW 24-BIT</span>
+                        <span className="z-dm-filesize">{((selectedFile?.size || 0) / 1048576).toFixed(2)} MB • RAW 24-BIT</span>
                         <span className="z-dm-change">CLICK TO REPLACE FRAME</span>
                       </div>
                     </div>
@@ -514,7 +558,7 @@ export default function App() {
             </div>
           </aside>
 
-          {/* Deck 2: Optical Retinal Viewport (Center) */}
+          {/* Center Viewport */}
           <section className="z-panel-viewport">
             <div className="z-optical-tools-bar">
               <div className="z-tool-cluster">
@@ -545,7 +589,7 @@ export default function App() {
                 <button
                   className={filterMode === 'redfree' ? 'active' : ''}
                   onClick={() => setFilterMode('redfree')}
-                  title="540nm Green Angiography emulation for maximum microvascular contrast"
+                  title="540nm Green Angiography emulation"
                 >
                   540nm Red-Free
                 </button>
@@ -573,14 +617,13 @@ export default function App() {
                 <button
                   className={showEtdrsGrid ? 'active' : ''}
                   onClick={() => setShowEtdrsGrid(!showEtdrsGrid)}
-                  title="Toggle Early Treatment Diabetic Retinopathy Study grid"
+                  title="Toggle ETDRS Grid"
                 >
                   ETDRS Grid
                 </button>
               </div>
             </div>
 
-            {/* The Surgical Viewing Chamber */}
             <div
               ref={viewportRef}
               className="z-viewport-chamber"
@@ -608,7 +651,6 @@ export default function App() {
                     draggable={false}
                   />
 
-                  {/* 9-Zone ETDRS Gold Standard Concentric Grid */}
                   {showEtdrsGrid && (
                     <div className="z-etdrs-grid-overlay">
                       <div className="z-grid-meridian vert"></div>
@@ -623,17 +665,16 @@ export default function App() {
                 <div className="z-viewport-empty">
                   <CalibratedApertureIcon size={52} color="#1c2028" />
                   <span className="z-ve-title">OPTICAL RETINAL CHAMBER DORMANT</span>
-                  <span className="z-ve-sub">Load a high-resolution fundus scan on the ingestion desk to begin examination.</span>
+                  <span className="z-ve-sub">Load a high-resolution fundus scan on the intake desk to begin examination.</span>
                 </div>
               )}
 
-              {/* Real-Time Processing HUD */}
               {analyzing && (
                 <div className="z-processing-curtain">
                   <div className="z-linear-scan-bar"></div>
                   <div className="z-telemetry-hud-box">
                     <div className="z-th-top">
-                      <span>DEEP LEARNING MODEL INFERENCE</span>
+                      <span>DEEP LEARNING INFERENCE</span>
                       <span className="z-th-step">EXECUTING</span>
                     </div>
                     <div className="z-th-caption">{analysisPhase}</div>
@@ -644,7 +685,6 @@ export default function App() {
                 </div>
               )}
 
-              {/* Viewport Annotations */}
               <div className="z-aperture-annotation tl">
                 <span>CASE: {currentReport?.patientDisplayId || 'PAT-AUDIT'}</span>
                 <span>OPTICS: 50° TELECENTRIC</span>
@@ -656,7 +696,7 @@ export default function App() {
             </div>
           </section>
 
-          {/* Deck 3: Diagnostic Staging & Findings (Right) */}
+          {/* Right Findings Deck */}
           <aside className="z-panel-findings">
             <div className="z-card-label">
               <span>ETDRS CLINICAL STAGING MATRIX</span>
@@ -665,7 +705,6 @@ export default function App() {
 
             {currentReport ? (
               <div className="z-findings-deck">
-                {/* Clinical Stage Banner */}
                 <div className={`z-stage-card stage-${currentReport.stage}`}>
                   <div className="z-stage-header">
                     <span className="z-stage-num">STAGE {currentReport.stage}</span>
@@ -681,7 +720,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Microvascular Scorecards */}
                 <div className="z-scorecard-grid">
                   <div className="z-score-cell">
                     <span className="z-sc-label">AGREEMENT INDEX</span>
@@ -699,13 +737,11 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Pathophysiology Assessment Box */}
                 <div className="z-assessment-box">
                   <div className="z-ab-header">PATHOPHYSIOLOGICAL ASSESSMENT</div>
                   <p className="z-ab-body">{currentReport.clinicalRationale}</p>
                 </div>
 
-                {/* Action Plan Box */}
                 <div className="z-assessment-box protocol">
                   <div className="z-ab-header protocol">RECOMMENDED CLINICAL MANAGEMENT</div>
                   <ul className="z-action-list">
@@ -717,7 +753,6 @@ export default function App() {
                   </ul>
                 </div>
 
-                {/* PDF Export Button */}
                 <button
                   onClick={() => downloadClinicalPdf(currentReport._id, currentReport.patientDisplayId)}
                   className="z-btn-pdf-export"
@@ -740,14 +775,14 @@ export default function App() {
       )}
 
       {/* Module 2: Case Repository */}
-      {(activeModule === 'archive' || user.role === 'patient') && (
+      {(activeModule === 'archive' || !isDoctor) && (
         <main className="z-archive-deck">
           <div className="z-archive-panel">
             <div className="z-archive-masthead">
               <div>
                 <div className="z-archive-title">
                   <DatabaseIcon size={16} color="#f59e0b" />
-                  <span>{user.role === 'doctor' ? 'CLINICAL CASE REPOSITORY' : 'MY CLINICAL SCREENING ENCOUNTERS'}</span>
+                  <span>{isDoctor ? 'CLINICAL CASE REPOSITORY' : 'MY CLINICAL SCREENING ENCOUNTERS'}</span>
                 </div>
                 <div className="z-archive-sub">Secure electronic records certified under ISO-15189 digital clinical audit standards</div>
               </div>
@@ -824,7 +859,7 @@ export default function App() {
 }
 
 // =========================================================================
-// WORKSTATION TITANIUM & AMBER THEME (WITH EXPLICIT FORM & SELECT CONTROLS)
+// THEME COMPONENT
 // =========================================================================
 function WorkstationTheme() {
   return (
@@ -837,7 +872,6 @@ function WorkstationTheme() {
         -webkit-font-smoothing: antialiased;
       }
 
-      /* Shell Layout */
       .z-workstation-shell { min-height: 100vh; display: flex; flex-direction: column; background: #0c0d10; }
       .z-masthead {
         height: 52px; background: #131519; border-bottom: 1px solid #232730;
@@ -872,7 +906,6 @@ function WorkstationTheme() {
       }
       .z-btn-power:hover { background: #3b1414; border-color: #ef4444; }
 
-      /* Sub Toolbar */
       .z-sub-toolbar {
         height: 38px; background: #0f1013; border-bottom: 1px solid #1c2027;
         display: flex; align-items: center; justify-content: space-between; padding: 0 18px;
@@ -890,14 +923,12 @@ function WorkstationTheme() {
       .z-mono-amber { color: #f59e0b; }
       .z-mono-white { color: #e2e8f0; }
 
-      /* Primary Grid */
       .z-workstation-deck {
         flex: 1; display: grid; grid-template-columns: 330px 1fr 360px;
         height: calc(100vh - 90px); overflow: hidden;
       }
       @media (max-width: 1200px) { .z-workstation-deck { grid-template-columns: 310px 1fr; } .z-panel-findings { display: none; } }
 
-      /* Side Panels */
       .z-panel-intake, .z-panel-findings {
         background: #131519; border-right: 1px solid #1c2027; padding: 16px;
         display: flex; flex-direction: column; gap: 14px; overflow-y: auto;
@@ -909,7 +940,6 @@ function WorkstationTheme() {
       }
       .z-case-id { font-size: 9px; color: #f59e0b; background: #f59e0b15; padding: 2px 6px; border-radius: 3px; }
 
-      /* Form Fields in Intake */
       .z-intake-form { display: flex; flex-direction: column; gap: 12px; }
       .z-input-wrapper { display: flex; flex-direction: column; gap: 5px; }
       .z-input-wrapper label { font-size: 9.5px; font-family: monospace; font-weight: 700; color: #64748b; }
@@ -958,7 +988,6 @@ function WorkstationTheme() {
       .z-pip.slate { background: #94a3b8; }
       .z-pip.violet { background: #a855f7; }
 
-      /* Viewport Center Panel */
       .z-panel-viewport { background: #07080a; display: flex; flex-direction: column; overflow: hidden; position: relative; }
       .z-optical-tools-bar {
         height: 40px; background: #131519; border-bottom: 1px solid #232730;
@@ -983,7 +1012,6 @@ function WorkstationTheme() {
       .z-ve-title { font-size: 12px; font-weight: 800; font-family: monospace; color: #333945; letter-spacing: 0.5px; }
       .z-ve-sub { font-size: 11px; color: #475060; max-width: 280px; }
 
-      /* ETDRS Concentric Grid */
       .z-etdrs-grid-overlay { position: absolute; inset: 0; pointer-events: none; border-radius: 50%; overflow: hidden; }
       .z-grid-meridian { position: absolute; background: rgba(245, 158, 11, 0.2); }
       .z-grid-meridian.vert { left: 50%; top: 0; bottom: 0; width: 1px; }
@@ -993,12 +1021,10 @@ function WorkstationTheme() {
       .z-grid-ring.inner { width: 44%; height: 44%; }
       .z-grid-ring.outer { width: 80%; height: 80%; }
 
-      /* Corner Aperture Annotations */
       .z-aperture-annotation { position: absolute; font-size: 9px; font-family: monospace; color: #475569; display: flex; flex-direction: column; gap: 2px; pointer-events: none; z-index: 5; }
       .z-aperture-annotation.tl { top: 12px; left: 16px; }
       .z-aperture-annotation.tr { top: 12px; right: 16px; text-align: right; }
 
-      /* Processing Simulation */
       .z-processing-curtain { position: absolute; inset: 0; pointer-events: none; z-index: 20; background: rgba(245, 158, 11, 0.02); }
       .z-linear-scan-bar { width: 100%; height: 2px; background: #f59e0b; position: absolute; animation: zScanLine 2.2s infinite ease-in-out; }
       @keyframes zScanLine { 0% { top: 15%; } 50% { top: 85%; } 100% { top: 15%; } }
@@ -1012,7 +1038,6 @@ function WorkstationTheme() {
       .z-th-gauge-meter { height: 100%; background: #f59e0b; animation: zMeter 1.8s infinite linear; }
       @keyframes zMeter { 0% { width: 0%; transform: translateX(-50%); } 100% { width: 100%; transform: translateX(100%); } }
 
-      /* Right Findings Deck */
       .z-findings-deck { display: flex; flex-direction: column; gap: 14px; }
       .z-stage-card { border-radius: 6px; padding: 12px; border: 1px solid; }
       .z-stage-card.stage-0 { background: #064e3b25; border-color: #059669; }
@@ -1050,7 +1075,6 @@ function WorkstationTheme() {
       .z-fd-title { font-size: 11px; font-weight: 800; font-family: monospace; color: #475569; }
       .z-fd-sub { font-size: 10.5px; color: #334155; max-width: 250px; }
 
-      /* Archive Deck */
       .z-archive-deck { padding: 20px; max-width: 1260px; margin: 0 auto; width: 100%; }
       .z-archive-panel { background: #131519; border: 1px solid #232730; border-radius: 8px; padding: 18px; }
       .z-archive-masthead { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #232730; padding-bottom: 12px; margin-bottom: 14px; }
@@ -1082,9 +1106,6 @@ function WorkstationTheme() {
       }
       .z-btn-doc:hover { background: #f59e0b; color: #000; }
 
-      /* =========================================================
-         EXPLICIT DARK AUTH STYLING & SELECT REPAIRS
-         ========================================================= */
       .z-auth-stage {
         min-height: 100vh; display: flex; align-items: center; justify-content: center;
         background: radial-gradient(circle at center, #15181e 0%, #07080a 100%); padding: 20px;
@@ -1113,7 +1134,6 @@ function WorkstationTheme() {
       .z-field { display: flex; flex-direction: column; gap: 6px; width: 100%; text-align: left; }
       .z-field label { font-size: 10px; font-family: monospace; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
 
-      /* Full Dark Mode Overrides for Inputs & Native Selects */
       .z-field input,
       .z-field select {
         width: 100% !important;
@@ -1135,7 +1155,6 @@ function WorkstationTheme() {
         box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2) !important;
       }
 
-      /* Custom Dropdown Chevron (Eliminates Browser Default White Styles) */
       .z-field select {
         appearance: none !important;
         -webkit-appearance: none !important;
@@ -1164,7 +1183,6 @@ function WorkstationTheme() {
       .z-alert-banner { background: #450a0a30; border: 1px solid #ef4444; color: #f87171; padding: 10px; border-radius: 6px; font-size: 11px; margin-bottom: 12px; }
       .z-auth-footer { text-align: center; font-size: 9px; font-family: monospace; color: #475569; margin-top: 22px; }
 
-      /* Remove Number Input Arrows */
       input[type=number]::-webkit-inner-spin-button, 
       input[type=number]::-webkit-outer-spin-button { 
         -webkit-appearance: none; 
@@ -1176,7 +1194,7 @@ function WorkstationTheme() {
 }
 
 // =========================================================================
-// SVG CLINICAL ICONS
+// CLINICAL ICONS
 // =========================================================================
 function CalibratedApertureIcon({ size = 18, color = 'currentColor' }) {
   return (
