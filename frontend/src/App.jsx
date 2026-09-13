@@ -209,16 +209,16 @@ export default function App() {
   };
 
   // ==========================================
-  // VIEW 1: ZEISS PACS AUTHENTICATION DESK
+  // VIEW 1: DOCTOR & PATIENT AUTHENTICATION PORTAL
   // ==========================================
   if (!token || !user) {
     return (
       <div className="z-auth-stage">
-        <ZeissWorkstationTheme />
+        <WorkstationTheme />
         <div className="z-auth-chassis">
           <div className="z-status-strip">
             <span className="z-led-indicator"></span>
-            <span>STANDALONE PACS WORKSTATION TERMINAL • OFFLINE ENCLAVE</span>
+            <span>SECURE CLINICAL WORKSTATION • ONLINE PORTAL</span>
           </div>
 
           <div className="z-auth-header">
@@ -226,8 +226,8 @@ export default function App() {
               <CalibratedApertureIcon size={22} color="#f59e0b" />
             </div>
             <div>
-              <div className="z-hardware-brand">ZEISS CIRRUS / iRetina Suite</div>
-              <div className="z-hardware-desc">High-Precision Retinal Biomarker Staging Architecture</div>
+              <div className="z-hardware-brand">iRetina Medical AI</div>
+              <div className="z-hardware-desc">Diabetic Retinopathy Screening & Diagnostics</div>
             </div>
           </div>
 
@@ -237,14 +237,14 @@ export default function App() {
               className={!isRegister ? 'active' : ''}
               onClick={() => { setIsRegister(false); setAuthError(''); }}
             >
-              CLINICIAN LOGIN
+              DOCTOR / PATIENT LOGIN
             </button>
             <button
               type="button"
               className={isRegister ? 'active' : ''}
               onClick={() => { setIsRegister(true); setAuthError(''); }}
             >
-              REGISTER CREDENTIAL
+              REGISTER ACCOUNT
             </button>
           </div>
 
@@ -254,28 +254,28 @@ export default function App() {
             {isRegister && (
               <>
                 <div className="z-field">
-                  <label>Physician / Patient Legal Identity</label>
+                  <label>Full Legal Name</label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Dr. Aditya Sharma"
+                    placeholder="e.g. Dr. Aditya Sharma / Patient Name"
                     value={authForm.name}
                     onChange={(e) => setAuthForm({ ...authForm, name: e.target.value })}
                   />
                 </div>
                 <div className="z-field-grid">
                   <div className="z-field">
-                    <label>Station Access Role</label>
+                    <label>Account Role</label>
                     <select
                       value={authForm.role}
                       onChange={(e) => setAuthForm({ ...authForm, role: e.target.value })}
                     >
-                      <option value="doctor">Consultant Ophthalmologist</option>
-                      <option value="patient">Registered Patient</option>
+                      <option value="doctor">Doctor / Clinician</option>
+                      <option value="patient">Patient</option>
                     </select>
                   </div>
                   <div className="z-field">
-                    <label>Demographics (Age/Sex)</label>
+                    <label>Age & Gender</label>
                     <div className="z-input-split">
                       <input
                         type="number"
@@ -289,6 +289,7 @@ export default function App() {
                       >
                         <option value="Male">M</option>
                         <option value="Female">F</option>
+                        <option value="Other">O</option>
                       </select>
                     </div>
                   </div>
@@ -297,18 +298,18 @@ export default function App() {
             )}
 
             <div className="z-field">
-              <label>Hospital Identification / Email</label>
+              <label>Hospital ID / Email Address</label>
               <input
                 type="email"
                 required
-                placeholder="clinician@hospital.org"
+                placeholder="name@hospital.org or email@domain.com"
                 value={authForm.email}
                 onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })}
               />
             </div>
 
             <div className="z-field">
-              <label>Electronic Signature Key</label>
+              <label>Password</label>
               <input
                 type="password"
                 required
@@ -319,12 +320,12 @@ export default function App() {
             </div>
 
             <button type="submit" disabled={authLoading} className="z-primary-btn">
-              {authLoading ? 'VERIFYING INSTITUTIONAL SECURITY...' : (isRegister ? 'PROVISION CREDENTIAL RECORD' : 'ENTER WORKSTATION CONSOLE')}
+              {authLoading ? 'VERIFYING CREDENTIALS...' : (isRegister ? 'CREATE MEDICAL ACCOUNT' : 'ENTER WORKSTATION')}
             </button>
           </form>
 
           <div className="z-auth-footer">
-            DICOM WADO-RS COMPLIANT • ISO 15189:2022 AUDIT CERTIFIED
+            AI-ASSISTED RETINAL ANALYSIS • POWERED BY FASTAPI & MONGODB ATLAS
           </div>
         </div>
       </div>
@@ -332,13 +333,13 @@ export default function App() {
   }
 
   // ==========================================
-  // VIEW 2: ZEISS / HEIDELBERG INDUSTRIAL WORKSTATION
+  // VIEW 2: CLINICAL WORKSTATION DASHBOARD
   // ==========================================
   return (
     <div className="z-workstation-shell">
-      <ZeissWorkstationTheme />
+      <WorkstationTheme />
 
-      {/* Primary Hardware Frame Header */}
+      {/* Primary Frame Header */}
       <header className="z-masthead">
         <div className="z-masthead-left">
           <div className="z-masthead-icon">
@@ -346,39 +347,39 @@ export default function App() {
           </div>
           <div>
             <div className="z-masthead-title">
-              ZEISS CIRRUS • <span className="z-dim">iRetina System v3.2</span>
+              iRetina Workstation • <span className="z-dim">Clinical AI Suite</span>
             </div>
-            <div className="z-masthead-sub">Clinical Retinal Biomarker & Microaneurysm Analyzer</div>
+            <div className="z-masthead-sub">Diabetic Retinopathy Screening & Microaneurysm Analyzer</div>
           </div>
         </div>
 
         <div className="z-telemetry-cluster">
           <div className="z-telemetry-pod">
             <span className="z-k">STORAGE:</span>
-            <span className="z-v green">Atlas Node 27017</span>
+            <span className="z-v green">Atlas Connected</span>
           </div>
           <div className="z-telemetry-pod">
-            <span className="z-k">ENGINE:</span>
-            <span className="z-v amber">FastAPI :8000</span>
+            <span className="z-k">AI ENGINE:</span>
+            <span className="z-v amber">FastAPI PyTorch</span>
           </div>
           <div className="z-telemetry-pod">
             <span className="z-k">METRIC:</span>
-            <span className="z-v">ETDRS ICDR-2026</span>
+            <span className="z-v">ETDRS ICDR Standard</span>
           </div>
         </div>
 
         <div className="z-masthead-right">
           <div className="z-operator-card">
             <span className="z-op-name">{user.name}</span>
-            <span className="z-op-title">{user.role === 'doctor' ? 'ATTENDING RETINA SPECIALIST' : 'PATIENT VIEW'}</span>
+            <span className="z-op-title">{user.role === 'doctor' ? 'ATTENDING CLINICIAN' : 'REGISTERED PATIENT'}</span>
           </div>
-          <button onClick={logout} className="z-btn-power" title="Terminate Session">
+          <button onClick={logout} className="z-btn-power" title="Sign Out">
             <PowerIcon size={14} color="#94a3b8" />
           </button>
         </div>
       </header>
 
-      {/* Sub-Masthead Tactical Toolbar */}
+      {/* Sub-Masthead Toolbar */}
       <div className="z-sub-toolbar">
         <div className="z-module-tabs">
           {user.role === 'doctor' && (
@@ -415,7 +416,7 @@ export default function App() {
           <aside className="z-panel-intake">
             <div className="z-card-label">
               <span>SCAN INGESTION & ANAMNESIS</span>
-              <span className="z-case-id">ACC-001</span>
+              <span className="z-case-id">EXAM-INTAKE</span>
             </div>
 
             <form onSubmit={triggerDiagnosticEngine} className="z-intake-form">
@@ -457,7 +458,7 @@ export default function App() {
                     <div className="z-dropzone-empty">
                       <OpticalSensorIcon size={26} color="#64748b" />
                       <span className="z-de-title">LOAD FUNDUS SCAN</span>
-                      <span className="z-de-sub">50° Optical Disc / Macular Stereo Capture</span>
+                      <span className="z-de-sub">Standard 50° Macular Retinal Capture</span>
                     </div>
                   )}
                 </div>
@@ -481,7 +482,7 @@ export default function App() {
                 {analyzing ? (
                   <span className="z-exec-loading">
                     <span className="z-spin-pip"></span>
-                    <span>TENSOR CLASSIFICATION IN PROGRESS...</span>
+                    <span>AI INFERENCE IN PROGRESS...</span>
                   </span>
                 ) : (
                   <>
@@ -626,13 +627,13 @@ export default function App() {
                 </div>
               )}
 
-              {/* Real-Time Processing HUD (Subtle, non-neon) */}
+              {/* Real-Time Processing HUD */}
               {analyzing && (
                 <div className="z-processing-curtain">
                   <div className="z-linear-scan-bar"></div>
                   <div className="z-telemetry-hud-box">
                     <div className="z-th-top">
-                      <span>DEEP CONVOLUTIONAL INFERENCE</span>
+                      <span>DEEP LEARNING MODEL INFERENCE</span>
                       <span className="z-th-step">EXECUTING</span>
                     </div>
                     <div className="z-th-caption">{analysisPhase}</div>
@@ -643,7 +644,7 @@ export default function App() {
                 </div>
               )}
 
-              {/* Viewport Boundary Annotations */}
+              {/* Viewport Annotations */}
               <div className="z-aperture-annotation tl">
                 <span>CASE: {currentReport?.patientDisplayId || 'PAT-AUDIT'}</span>
                 <span>OPTICS: 50° TELECENTRIC</span>
@@ -716,7 +717,7 @@ export default function App() {
                   </ul>
                 </div>
 
-                {/* 2-Page Pathology PDF Button */}
+                {/* PDF Export Button */}
                 <button
                   onClick={() => downloadClinicalPdf(currentReport._id, currentReport.patientDisplayId)}
                   className="z-btn-pdf-export"
@@ -738,7 +739,7 @@ export default function App() {
         </main>
       )}
 
-      {/* Module 2: Central Case Repository */}
+      {/* Module 2: Case Repository */}
       {(activeModule === 'archive' || user.role === 'patient') && (
         <main className="z-archive-deck">
           <div className="z-archive-panel">
@@ -746,7 +747,7 @@ export default function App() {
               <div>
                 <div className="z-archive-title">
                   <DatabaseIcon size={16} color="#f59e0b" />
-                  <span>{user.role === 'doctor' ? 'INSTITUTIONAL OPHTHALMIC ARCHIVE' : 'MY CLINICAL SCREENING ENCOUNTERS'}</span>
+                  <span>{user.role === 'doctor' ? 'CLINICAL CASE REPOSITORY' : 'MY CLINICAL SCREENING ENCOUNTERS'}</span>
                 </div>
                 <div className="z-archive-sub">Secure electronic records certified under ISO-15189 digital clinical audit standards</div>
               </div>
@@ -823,9 +824,9 @@ export default function App() {
 }
 
 // =========================================================================
-// ZEISS WORKSTATION SURGICAL TITANIUM & TUNGSTEN AMBER THEME
+// WORKSTATION TITANIUM & AMBER THEME (WITH EXPLICIT FORM & SELECT CONTROLS)
 // =========================================================================
-function ZeissWorkstationTheme() {
+function WorkstationTheme() {
   return (
     <style>{`
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -834,7 +835,6 @@ function ZeissWorkstationTheme() {
         color: #e2e8f0;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
         -webkit-font-smoothing: antialiased;
-        font-feature-settings: "cv02", "cv03", "cv04", "cv11", "tnum";
       }
 
       /* Shell Layout */
@@ -909,7 +909,7 @@ function ZeissWorkstationTheme() {
       }
       .z-case-id { font-size: 9px; color: #f59e0b; background: #f59e0b15; padding: 2px 6px; border-radius: 3px; }
 
-      /* Form Fields */
+      /* Form Fields in Intake */
       .z-intake-form { display: flex; flex-direction: column; gap: 12px; }
       .z-input-wrapper { display: flex; flex-direction: column; gap: 5px; }
       .z-input-wrapper label { font-size: 9.5px; font-family: monospace; font-weight: 700; color: #64748b; }
@@ -983,7 +983,7 @@ function ZeissWorkstationTheme() {
       .z-ve-title { font-size: 12px; font-weight: 800; font-family: monospace; color: #333945; letter-spacing: 0.5px; }
       .z-ve-sub { font-size: 11px; color: #475060; max-width: 280px; }
 
-      /* ETDRS Gold Standard Concentric Grid */
+      /* ETDRS Concentric Grid */
       .z-etdrs-grid-overlay { position: absolute; inset: 0; pointer-events: none; border-radius: 50%; overflow: hidden; }
       .z-grid-meridian { position: absolute; background: rgba(245, 158, 11, 0.2); }
       .z-grid-meridian.vert { left: 50%; top: 0; bottom: 0; width: 1px; }
@@ -1082,47 +1082,101 @@ function ZeissWorkstationTheme() {
       }
       .z-btn-doc:hover { background: #f59e0b; color: #000; }
 
-      /* Auth Screen */
+      /* =========================================================
+         EXPLICIT DARK AUTH STYLING & SELECT REPAIRS
+         ========================================================= */
       .z-auth-stage {
         min-height: 100vh; display: flex; align-items: center; justify-content: center;
         background: radial-gradient(circle at center, #15181e 0%, #07080a 100%); padding: 20px;
       }
       .z-auth-chassis {
-        width: 100%; max-width: 420px; background: #131519; border: 1px solid #232730;
-        border-radius: 8px; padding: 26px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.9);
+        width: 100%; max-width: 440px; background: #131519; border: 1px solid #232730;
+        border-radius: 10px; padding: 30px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.95);
       }
-      .z-status-strip { display: flex; align-items: center; gap: 6px; font-size: 8.5px; font-family: monospace; color: #f59e0b; letter-spacing: 0.5px; margin-bottom: 16px; }
-      .z-led-indicator { width: 5px; height: 5px; border-radius: 50%; background: #f59e0b; }
-      .z-auth-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+      .z-status-strip { display: flex; align-items: center; gap: 6px; font-size: 9px; font-family: monospace; color: #f59e0b; letter-spacing: 0.5px; margin-bottom: 18px; }
+      .z-led-indicator { width: 6px; height: 6px; border-radius: 50%; background: #f59e0b; box-shadow: 0 0 6px #f59e0b; }
+      .z-auth-header { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
       .z-hardware-icon {
-        width: 38px; height: 38px; background: #090a0d; border: 1px solid #232730;
+        width: 40px; height: 40px; background: #090a0d; border: 1px solid #232730;
         border-radius: 6px; display: flex; align-items: center; justify-content: center;
       }
-      .z-hardware-brand { font-size: 14px; font-weight: 800; color: #ffffff; letter-spacing: 0.5px; }
-      .z-hardware-desc { font-size: 10px; color: #64748b; font-family: monospace; }
-      .z-auth-switch { display: flex; border-bottom: 1px solid #232730; margin-bottom: 16px; }
+      .z-hardware-brand { font-size: 16px; font-weight: 800; color: #ffffff; letter-spacing: 0.5px; }
+      .z-hardware-desc { font-size: 11px; color: #64748b; font-family: monospace; margin-top: 2px; }
+      .z-auth-switch { display: flex; border-bottom: 1px solid #232730; margin-bottom: 20px; }
       .z-auth-switch button {
-        flex: 1; padding: 9px; background: none; border: none; font-size: 10.5px; font-weight: 800;
+        flex: 1; padding: 11px; background: none; border: none; font-size: 11px; font-weight: 800;
         font-family: monospace; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s;
       }
       .z-auth-switch button.active { color: #f59e0b; border-bottom-color: #f59e0b; }
-      .z-primary-btn {
-        background: #f59e0b; border: none; border-radius: 4px; padding: 11px; font-size: 11px;
-        font-weight: 800; font-family: monospace; color: #000; letter-spacing: 0.5px; cursor: pointer; margin-top: 4px;
+      
+      .z-form { display: flex; flex-direction: column; gap: 14px; }
+      .z-field { display: flex; flex-direction: column; gap: 6px; width: 100%; text-align: left; }
+      .z-field label { font-size: 10px; font-family: monospace; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+
+      /* Full Dark Mode Overrides for Inputs & Native Selects */
+      .z-field input,
+      .z-field select {
+        width: 100% !important;
+        height: 42px !important;
+        box-sizing: border-box !important;
+        background-color: #090a0d !important;
+        color: #f8fafc !important;
+        border: 1px solid #2d333f !important;
+        border-radius: 6px !important;
+        padding: 0 12px !important;
+        font-size: 13px !important;
+        font-family: monospace, sans-serif !important;
+        outline: none !important;
+        transition: border-color 0.15s, box-shadow 0.15s !important;
       }
+      .z-field input:focus,
+      .z-field select:focus {
+        border-color: #f59e0b !important;
+        box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2) !important;
+      }
+
+      /* Custom Dropdown Chevron (Eliminates Browser Default White Styles) */
+      .z-field select {
+        appearance: none !important;
+        -webkit-appearance: none !important;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23f59e0b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+        background-repeat: no-repeat !important;
+        background-position: right 12px center !important;
+        padding-right: 32px !important;
+        cursor: pointer !important;
+      }
+      .z-field select option {
+        background-color: #131519 !important;
+        color: #f8fafc !important;
+        padding: 8px !important;
+      }
+
+      .z-field-grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 10px; width: 100%; }
+      .z-input-split { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; width: 100%; }
+
+      .z-primary-btn {
+        width: 100%; background: #f59e0b; border: none; border-radius: 6px; padding: 13px; font-size: 12px;
+        font-weight: 800; font-family: monospace; color: #000; letter-spacing: 0.8px; cursor: pointer; margin-top: 6px;
+        transition: background-color 0.15s ease;
+      }
+      .z-primary-btn:hover { background: #fbbf24; }
       .z-primary-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-      .z-alert-banner { background: #450a0a30; border: 1px solid #ef4444; color: #f87171; padding: 8px; border-radius: 4px; font-size: 10.5px; margin-bottom: 12px; }
-      .z-auth-footer { text-align: center; font-size: 8.5px; font-family: monospace; color: #475569; margin-top: 18px; }
-      .z-field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-      .z-input-split { display: flex; gap: 5px; }
-      .z-input-split input { width: 55%; }
-      .z-input-split select { width: 45%; }
+      .z-alert-banner { background: #450a0a30; border: 1px solid #ef4444; color: #f87171; padding: 10px; border-radius: 6px; font-size: 11px; margin-bottom: 12px; }
+      .z-auth-footer { text-align: center; font-size: 9px; font-family: monospace; color: #475569; margin-top: 22px; }
+
+      /* Remove Number Input Arrows */
+      input[type=number]::-webkit-inner-spin-button, 
+      input[type=number]::-webkit-outer-spin-button { 
+        -webkit-appearance: none; 
+        margin: 0; 
+      }
+      input[type=number] { -moz-appearance: textfield; }
     `}</style>
   );
 }
 
 // =========================================================================
-// PRECISION CLINICAL HARDWARE ICONS (STRICT SVGS)
+// SVG CLINICAL ICONS
 // =========================================================================
 function CalibratedApertureIcon({ size = 18, color = 'currentColor' }) {
   return (
