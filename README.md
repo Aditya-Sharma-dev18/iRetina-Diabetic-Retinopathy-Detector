@@ -1,4 +1,3 @@
-
 # 👁️ iRetina - AI-Powered Diabetic Retinopathy Diagnostic Workstation
 
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
@@ -23,10 +22,9 @@
 - [Installation](#-installation)
 - [Usage](#-usage)
 - [API Endpoints](#-api-endpoints)
-- [Deployment](#-deployment)
 - [Troubleshooting](#-troubleshooting)
-- [Contributing](#-contributing)
 - [License](#-license)
+- [Contact & Support](#-contact--support)
 
 ---
 
@@ -137,6 +135,86 @@ The classifier aligns with the **International Clinical Diabetic Retinopathy (IC
 
 ### 1. Clone the Repository
 ```bash
-git clone [https://github.com/Aditya-Sharma-dev18/iRetina-Diabetic-Retinopathy-Detector.git](https://github.com/Aditya-Sharma-dev18/iRetina-Diabetic-Retinopathy-Detector.git)
+git clone https://github.com/Aditya-Sharma-dev18/iRetina-Diabetic-Retinopathy-Detector.git
 cd iRetina-Diabetic-Retinopathy-Detector
+```
 
+### 2. Setup AI Inference Engine (FastAPI)
+```bash
+cd ai_service
+python -m venv venv
+
+# Windows:
+venv\Scripts\activate
+# Linux/macOS:
+source venv/bin/activate
+
+pip install -r requirements.txt
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+### 3. Setup Backend Gateway (Node.js)
+```bash
+cd ../backend
+npm install
+npm start
+```
+
+### 4. Setup Frontend Client (React)
+```bash
+cd ../frontend
+npm install
+npm run dev
+```
+
+---
+
+## 🎯 Usage
+
+### Clinical Workflow
+1. Open the portal (http://localhost:5173 or deployed instance).
+2. Sign in as a Doctor or register an attending profile.
+3. In the Fundus Exam Console, enter the patient email.
+4. Upload a 50° fundus scan (.jpg, .png).
+5. Click **Run Clinical Biomarker Inference**.
+6. Review classification, examine the Lesion Overlay with 540nm Red-Free mode, and click **Export Certified 2-Page Pathology Report**.
+
+---
+
+## 📡 API Endpoints
+
+| Endpoint | Method | Role | Description |
+|---|---|---|---|
+| `/api/auth/register` | POST | Public | Register doctor or patient profile |
+| `/api/auth/login` | POST | Public | Verify credentials and receive JWT |
+| `/api/reports/analyze` | POST | Doctor | Ingest fundus scan, trigger AI inference |
+| `/api/reports/all` | GET | Doctor | Retrieve hospital-wide diagnostic repository |
+| `/api/reports/my` | GET | Patient | Retrieve personal screening history |
+| `/api/reports/:id/pdf` | GET | Doctor/Patient | Generate certified clinical PDF |
+| `/api/v1/diagnose` | POST | Internal | FastAPI deep learning endpoint |
+| `/health` | GET | Public | Microservice health check |
+
+---
+
+## 🔧 Troubleshooting
+
+| Issue | Root Cause | Solution |
+|---|---|---|
+| 502 Bad Gateway | FastAPI engine killed by Render 512MB RAM ceiling during backward pass. | Restricted gradients to classification head; frozen DenseNet backbone in `torch.no_grad()`. |
+| Request Timeout | Free-tier instances entering sleep state (cold starts). | Configured Axios with 90s threshold; pre-warm engine via `/docs`. |
+| Invalid URL Alert | Environment variables containing markdown syntax or quotes. | Added regex sanitization in `server.js`. |
+| Atlas DNS Lookup Fail | Strict local ISP blocking SRV resolution. | Enforced Google Public DNS (8.8.8.8) at process runtime. |
+
+---
+
+## 📄 License
+This project is distributed under the MIT License. Refer to the LICENSE file for complete details.
+
+---
+
+## 📞 Contact & Support
+**Lead Developer:** Aditya Sharma
+**Email:** sharma.adityaaa0001@gmail.com
+**Repository:** iRetina-Diabetic-Retinopathy-Detector
+
+Made with ❤️ for AI-Assisted Ophthalmology
