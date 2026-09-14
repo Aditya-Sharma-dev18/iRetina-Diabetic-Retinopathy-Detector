@@ -6,7 +6,7 @@ const API_BASE = 'https://iretina-node-gateway.onrender.com/api';
 // Configure Axios instance with a 30s timeout to handle Render cold starts gracefully
 const api = axios.create({
   baseURL: API_BASE,
-  timeout: 30000 
+  timeout: 90000 
 });
 
 export default function App() {
