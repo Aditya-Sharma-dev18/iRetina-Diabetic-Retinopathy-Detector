@@ -1,5 +1,6 @@
 import os
 import io
+import gc
 import cv2
 import types
 import base64
@@ -11,6 +12,9 @@ from PIL import Image
 from torchvision import models, transforms
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+
+# Limit CPU threads to prevent memory thrashing on Render free tier
+torch.set_num_threads(2)
 
 app = FastAPI(title="iRetina Diagnostic Engine", version="1.0.0")
 
@@ -53,51 +57,16 @@ def load_trained_model():
     net.load_state_dict(state_dict)
     net.to(DEVICE)
     net.eval()
+
+    # Freeze all parameters permanently to prevent memory overhead
+    for param in net.parameters():
+        param.requires_grad = False
+
     return net
 
 print(f"Loading weights onto {DEVICE}...")
 model = load_trained_model()
 print("Model loaded successfully.")
-
-class GradCAM:
-    def __init__(self, target_model, target_layer):
-        self.model = target_model
-        self.target_layer = target_layer
-        self.gradients = None
-        self.activations = None
-        self.hook = self.target_layer.register_forward_hook(self._forward_hook)
-
-    def _forward_hook(self, module, input, output):
-        self.activations = output
-        output.register_hook(self._backward_hook)
-
-    def _backward_hook(self, grad):
-        self.gradients = grad
-
-    def generate(self, tensor):
-        self.model.eval()
-        with torch.enable_grad():
-            output = self.model(tensor)
-            pred_class = torch.argmax(output, dim=1).item()
-            prob = F.softmax(output, dim=1)[0, pred_class].item()
-            
-            self.model.zero_grad()
-            output[0, pred_class].backward()
-
-        gradients = self.gradients.cpu().data.numpy()[0]
-        activations = self.activations.cpu().data.numpy()[0]
-        weights = np.mean(gradients, axis=(1, 2))
-
-        cam = np.zeros(activations.shape[1:], dtype=np.float32)
-        for i, w in enumerate(weights):
-            cam += w * activations[i]
-
-        cam = np.maximum(cam, 0)
-        cam = cv2.resize(cam, (256, 256))
-        cam_min, cam_max = cam.min(), cam.max()
-        cam = (cam - cam_min) / (cam_max - cam_min) if (cam_max - cam_min) > 1e-8 else np.zeros_like(cam)
-        self.hook.remove()
-        return cam, pred_class, prob
 
 REPORTS = {
     0: {
@@ -137,20 +106,66 @@ REPORTS = {
     }
 }
 
+def generate_cam_and_predict(tensor):
+    # 1. Run heavy 120-layer DenseNet backbone in zero-memory mode
+    with torch.no_grad():
+        features = model.features(tensor)
+
+    # 2. Track gradients ONLY across the lightweight head (norm5 -> pool -> linear)
+    feat_var = features.detach().clone().requires_grad_(True)
+    out = F.relu(feat_var, inplace=False)
+    out = F.adaptive_avg_pool2d(out, (1, 1))
+    out = torch.flatten(out, 1)
+    output = model.classifier(out)
+
+    pred_class = torch.argmax(output, dim=1).item()
+    prob = F.softmax(output, dim=1)[0, pred_class].item()
+
+    # 3. Micro-backward pass without allocating full network computational graph
+    model.zero_grad(set_to_none=True)
+    output[0, pred_class].backward()
+
+    gradients = feat_var.grad.cpu().data.numpy()[0]
+    activations = features.cpu().data.numpy()[0]
+
+    # 4. Generate Grad-CAM heat matrix
+    weights = np.mean(gradients, axis=(1, 2))
+    cam = np.zeros(activations.shape[1:], dtype=np.float32)
+    for i, w in enumerate(weights):
+        cam += w * activations[i]
+
+    cam = np.maximum(cam, 0)
+    cam = cv2.resize(cam, (256, 256))
+    cam_min, cam_max = cam.min(), cam.max()
+    cam = (cam - cam_min) / (cam_max - cam_min) if (cam_max - cam_min) > 1e-8 else np.zeros_like(cam)
+
+    del feat_var, out, output, gradients, activations, features
+    return cam, pred_class, prob
+
 def process_retinal_image(image_bytes):
     nparr = np.frombuffer(image_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    del nparr
     if img is None:
         raise ValueError("Invalid image file provided.")
+
+    # Downscale immediately if high-res fundus camera capture is uploaded
+    h, w = img.shape[:2]
+    if max(h, w) > 1024:
+        scale = 1024 / max(h, w)
+        img = cv2.resize(img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
 
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     mask = gray > 7
     if mask.any():
         img = img[np.ix_(mask.any(1), mask.any(0))]
+    del gray, mask
 
     img = cv2.resize(img, (256, 256))
     proc = cv2.addWeighted(img, 4, cv2.GaussianBlur(img, (0, 0), 25.6), -4, 128)
+    del img
     proc_rgb = cv2.cvtColor(proc, cv2.COLOR_BGR2RGB)
+    del proc
 
     transform = transforms.Compose([
         transforms.ToTensor(),
@@ -158,8 +173,8 @@ def process_retinal_image(image_bytes):
     ])
     tensor = transform(Image.fromarray(proc_rgb)).unsqueeze(0).to(DEVICE)
 
-    cam_engine = GradCAM(model, model.features.norm5)
-    cam, pred_class, confidence = cam_engine.generate(tensor)
+    cam, pred_class, confidence = generate_cam_and_predict(tensor)
+    del tensor
 
     boxed_img = proc_rgb.copy()
     valid_boxes = 0
@@ -190,6 +205,9 @@ def process_retinal_image(image_bytes):
 
     report_meta = REPORTS[pred_class]
     area_pct = round((total_lesion_area / (256 * 256)) * 100, 2)
+
+    del boxed_img, cam
+    gc.collect()
 
     return {
         "stage": pred_class,
