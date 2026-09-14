@@ -1,6 +1,4 @@
-cd D:\PROJECTS\Diabetic_retinopathy_app
 
-@'
 # 👁️ iRetina - AI-Powered Diabetic Retinopathy Diagnostic Workstation
 
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
