@@ -140,15 +140,3 @@ The classifier aligns with the **International Clinical Diabetic Retinopathy (IC
 git clone [https://github.com/Aditya-Sharma-dev18/iRetina-Diabetic-Retinopathy-Detector.git](https://github.com/Aditya-Sharma-dev18/iRetina-Diabetic-Retinopathy-Detector.git)
 cd iRetina-Diabetic-Retinopathy-Detector
 
-cd ai_service
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-3. Setup Backend Gateway (Node.js)Bashcd ../backend
-npm install
-npm start
-4. Setup Frontend Client (React)Bashcd ../frontend
-npm install
-npm run dev
-🎯 UsageClinical WorkflowOpen the portal (http://localhost:5173 or deployed instance).Sign in as a Doctor or register an attending profile.In the Fundus Exam Console, enter the patient email.Upload a 50° fundus scan (.jpg, .png).Click Run Clinical Biomarker Inference.Review classification, examine the Lesion Overlay with 540nm Red-Free mode, and click Export Certified 2-Page Pathology Report.📡 API EndpointsEndpointMethodRoleDescription/api/auth/registerPOSTPublicRegister doctor or patient profile/api/auth/loginPOSTPublicVerify credentials and receive JWT/api/reports/analyzePOSTDoctorIngest fundus scan, trigger AI inference/api/reports/allGETDoctorRetrieve hospital-wide diagnostic repository/api/reports/myGETPatientRetrieve personal screening history/api/reports/:id/pdfGETDoctor/PatientGenerate certified clinical PDF/api/v1/diagnosePOSTInternalFastAPI deep learning endpoint/healthGETPublicMicroservice health check🔧 TroubleshootingIssueRoot CauseSolution502 Bad GatewayFastAPI engine killed by Render 512MB RAM ceiling during backward pass.Restricted gradients to classification head; frozen DenseNet backbone in torch.no_grad().Request TimeoutFree-tier instances entering sleep state (cold starts).Configured Axios with 90s threshold; pre-warm engine via /docs.Invalid URL AlertEnvironment variables containing markdown syntax or quotes.Added regex sanitization in server.js.Atlas DNS Lookup FailStrict local ISP blocking SRV resolution.Enforced Google Public DNS (8.8.8.8) at process runtime.📄 LicenseThis project is distributed under the MIT License. Refer to the LICENSE file for complete details.📞 Contact & SupportLead Developer: Aditya SharmaEmail: sharma.adityaaa0001@gmail.comRepository: iRetina-Diabetic-Retinopathy-DetectorMade with ❤️ for AI-Assisted Ophthalmology'@ | Out-File -FilePath README.md -Encoding utf8
