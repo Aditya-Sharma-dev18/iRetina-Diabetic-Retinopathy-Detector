@@ -1,4 +1,4 @@
-# 👁️ iRetina - AI-Powered Diabetic Retinopathy Diagnostic Workstation
+# 👁️ iRetina - AI-Powered Diabetic Retinopathy Diagnostic Workstation   
 
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104.1-green.svg)](https://fastapi.tiangolo.com/)
@@ -9,7 +9,7 @@
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 > **Clinical-grade automated fundus screening, ETDRS severity classification, and explainable Grad-CAM lesion localization powered by Deep Learning.**
-
+  
 ---
 
 ## 📋 Table of Contents
